@@ -33,14 +33,28 @@ class AddLabel(BasicTransformer):
             # We want to know if any of the search terms are present  
             if node.type.value not in ['view', 'explore'] and any(search_term.lower() in node.name.value for search_term in self.field_search):
                 # Generate the new label to add
-                new_label = PairNode(
-                    SyntaxToken(value='group_label', prefix='', suffix=''),
-                    SyntaxToken(value=label_name, prefix='', suffix='\n    ')
-                )
+                # First, check if there's already a group label, because the new label will be formatted differently
+                already_contains_group_label = any(item.type.value == 'group_label' for item in node.container.items)
+                if already_contains_group_label: # if the group label param already exists
+                    if node.container.items[0].type.value == 'group_label': # is the first parameter 'group_label'?
+                        new_label = PairNode(
+                            SyntaxToken(value='group_label', prefix='', suffix=''),
+                            SyntaxToken(value=label_name, prefix='', suffix='') # Don't include a newline character at the end of it, becuase it already exists
+                        )
+                    else:
+                        new_label = PairNode(
+                            SyntaxToken(value='group_label', prefix='', suffix=''),
+                            SyntaxToken(value=label_name, prefix='', suffix='\n    ') # Newline character needs to be added
+                        )
+                else: # If group_label param doesn't exist
+                    new_label = PairNode(
+                        SyntaxToken(value='group_label', prefix='', suffix=''),
+                        SyntaxToken(value=label_name, prefix='', suffix='\n    ') # Include the newline character at the end of the PairNode
+                    )
                 
                 if not self.overwrite_override:
                     # We want to overwrite the group label, but should probably check to make sure it's okay first
-                    if self.overwrite_confirmation:
+                    if self.overwrite_confirmation and already_contains_group_label:
                         overwrite = input(f'The field {node.name.value} already has a group_label parameter. Do you want to overwrite (Y/N):  ')
                         if overwrite.lower() not in ['n', 'no']:
                             pass
